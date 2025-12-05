@@ -1,78 +1,44 @@
-pipeline {
-    agent any
+stage('Test + Agentic AI Decision') {
+    steps {
+        script {
+            // Simulate test failure
+            def status = bat(script: 'exit /b 1', returnStatus: true)
 
-    environment {
-        OPENAI_API_KEY = credentials('OPENAI_API_KEY')
-    }
+            if (status != 0) {
 
-    stages {
+                // Write dummy error log
+                writeFile file: 'error.log',
+                          text: 'Connection refused from database service on port 5432'
 
-        stage('Checkout') {
-            steps { 
-                checkout scm 
-            }
-        }
+                // Read file in Windows
+                def logs = bat(
+                    script: 'type error.log',
+                    returnStdout: true
+                ).trim()
 
-        stage('Install Requirements') {
-            steps {
-                bat 'python -m venv venv'
-                bat 'venv\\Scripts\\pip install -r agent\\requirements.txt'
-            }
-        }
+                // Call AI agent
+                def decision = bat(
+                    script: "venv\\Scripts\\python agent\\agent.py \"${logs}\"",
+                    returnStdout: true
+                ).trim()
 
-        stage('Build') {
-            steps {
-                bat 'echo BUILD SUCCESS'
-            }
-        }
+                echo "🤖 AI DECISION: ${decision}"
 
-        stage('Test + Agentic AI Decision') {
-            steps {
-                script {
-
-                    // Simulate failure
-                    def status = bat(script: "echo Simulating failure & exit /b 1", returnStatus: true)
-
-                    if (status != 0) {
-
-                        writeFile file: 'error.log',
-                                  text: 'Connection refused from database service on port 5432'
-
-                        def logs = bat(
-                            script: 'type error.log',
-                            returnStdout: true
-                        ).trim()
-
-                        def decision = bat(
-                            script: "venv\\Scripts\\python agent\\agent.py \"${logs}\"",
-                            returnStdout: true
-                        ).trim()
-
-                        echo "🤖 AI DECISION: ${decision}"
-
-                        if (decision == "RETRY") {
-                            bat "echo AI suggested: Retry test"
-                        }
-                        else if (decision == "RESTART_SERVICE") {
-                            bat "echo AI suggested: Restarting service"
-                        }
-                        else if (decision == "NOTIFY") {
-                            bat "echo AI suggested: Human intervention required"
-                        }
-                        else {
-                            error "Pipeline stopped by AI decision: ${decision}"
-                        }
-
-                    } else {
-                        bat "echo Tests passed successfully"
-                    }
+                if (decision.contains("RETRY")) {
+                    echo "AI suggested: Retry"
+                }
+                else if (decision.contains("RESTART")) {
+                    echo "AI suggested: Restart service"
+                }
+                else if (decision.contains("NOTIFY")) {
+                    echo "AI suggested: Human intervention"
+                }
+                else {
+                    error "Pipeline stopped by AI decision: ${decision}"
                 }
             }
-        }
-
-        stage('Deploy') {
-            steps {
-                bat 'echo Deploying application...'
+            else {
+                echo "Tests passed successfully"
             }
         }
     }
