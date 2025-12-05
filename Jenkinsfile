@@ -30,13 +30,13 @@ pipeline {
             steps {
                 script {
 
-                    // simulate failure
+                    // Simulate failure
                     def status = bat(script: "echo Simulating failure & exit /b 1", returnStatus: true)
 
                     if (status != 0) {
 
                         writeFile file: 'error.log',
-                            text: 'Connection refused from database service on port 5432'
+                                  text: 'Connection refused from database service on port 5432'
 
                         def logs = bat(
                             script: 'type error.log',
@@ -51,13 +51,13 @@ pipeline {
                         echo "🤖 AI DECISION: ${decision}"
 
                         if (decision == "RETRY") {
-                            bat "echo Retrying tests..."
+                            bat "echo AI suggested: Retry test"
                         }
                         else if (decision == "RESTART_SERVICE") {
-                            bat "echo Restarting service..."
+                            bat "echo AI suggested: Restarting service"
                         }
                         else if (decision == "NOTIFY") {
-                            bat "echo Human intervention required"
+                            bat "echo AI suggested: Human intervention required"
                         }
                         else {
                             error "Pipeline stopped by AI decision: ${decision}"

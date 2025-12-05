@@ -3,30 +3,45 @@ import sys
 import os
 
 def main():
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     error_log = sys.argv[1]
 
-    prompt = f"""
-    You are a CI/CD DevOps AI agent.
+    # If API key missing, fallback (POC safety)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        if "connection refused" in error_log.lower():
+            print("RESTART_SERVICE")
+        else:
+            print("NOTIFY")
+        return
 
-    Jenkins pipeline failed with error:
-    {error_log}
+    try:
+        client = OpenAI(api_key=api_key)
 
-    Decide action: RETRY, RESTART_SERVICE, NOTIFY, or STOP
-    Return only one word.
-    """
+        prompt = f"""
+        You are a CI/CD DevOps AI agent.
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a DevOps assistant"},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0
-    )
+        Jenkins pipeline failed with error:
+        {error_log}
 
-    print(response.choices[0].message.content.strip())
+        Decide action: RETRY, RESTART_SERVICE, NOTIFY, or STOP
+        Return only ONE WORD.
+        """
+
+        response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=prompt
+        )
+
+        decision = response.output_text.strip()
+        print(decision)
+
+    except Exception as e:
+        # Fail-safe for quota / internet / API issues
+        if "connection refused" in error_log.lower():
+            print("RESTART_SERVICE")
+        else:
+            print("NOTIFY")
 
 
 if __name__ == "__main__":
