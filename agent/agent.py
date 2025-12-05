@@ -1,42 +1,32 @@
-import os
+from openai import OpenAI
 import sys
-import openai
+import os
 
 def main():
-    if len(sys.argv) < 2:
-        print("NO_LOGS")
-        return
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    logs = sys.argv[1]
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
-    if not openai.api_key:
-        print("NO_API_KEY")
-        return
+    error_log = sys.argv[1]
 
     prompt = f"""
-You are a DevOps AI agent.
+    You are a CI/CD DevOps AI agent.
 
-Based on this Jenkins error log, choose ONE action only from:
-RETRY / RESTART_SERVICE / NOTIFY / STOP
+    Jenkins pipeline failed with error:
+    {error_log}
 
-Error log:
-{logs}
+    Decide action: RETRY, RESTART_SERVICE, NOTIFY, or STOP
+    Return only one word.
+    """
 
-Give only 1 word.
-"""
-
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "DevOps Expert"},
+            {"role": "system", "content": "You are a DevOps assistant"},
             {"role": "user", "content": prompt}
         ],
         temperature=0
     )
 
-    decision = response["choices"][0]["message"]["content"].strip().upper()
-    print(decision)
+    print(response.choices[0].message.content.strip())
 
 
 if __name__ == "__main__":
