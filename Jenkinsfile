@@ -1,8 +1,9 @@
 stage('Test + Agentic AI Decision') {
     steps {
         script {
-            // Simulate test failure
-            def status = bat(script: 'exit /b 1', returnStatus: true)
+
+            // Simulate test failure in Windows
+            def status = bat(script: '@echo off\nexit /b 1', returnStatus: true)
 
             if (status != 0) {
 
@@ -10,28 +11,33 @@ stage('Test + Agentic AI Decision') {
                 writeFile file: 'error.log',
                           text: 'Connection refused from database service on port 5432'
 
-                // Read file in Windows
+                // Read error log from Windows file
                 def logs = bat(
-                    script: 'type error.log',
+                    script: '@echo off\ntype error.log',
                     returnStdout: true
                 ).trim()
+
+                echo "Error log: ${logs}"
 
                 // Call AI agent
                 def decision = bat(
-                    script: "venv\\Scripts\\python agent\\agent.py \"${logs}\"",
+                    script: '@echo off\nvenv\\Scripts\\python agent\\agent.py "' + logs + '"',
                     returnStdout: true
                 ).trim()
 
+                decision = decision.toUpperCase()
                 echo "🤖 AI DECISION: ${decision}"
 
                 if (decision.contains("RETRY")) {
                     echo "AI suggested: Retry"
+                    bat 'echo Retrying tests...'
                 }
                 else if (decision.contains("RESTART")) {
                     echo "AI suggested: Restart service"
+                    bat 'echo Restarting service...'
                 }
                 else if (decision.contains("NOTIFY")) {
-                    echo "AI suggested: Human intervention"
+                    echo "AI suggested: Human intervention required"
                 }
                 else {
                     error "Pipeline stopped by AI decision: ${decision}"
